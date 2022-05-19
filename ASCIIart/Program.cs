@@ -11,8 +11,13 @@ namespace ASCIIart
     {
         static void Main(string[] args)
         {
-            //get image bitmap from file path
+            //list of characters ordered by 'pixel density'
+            string pixelChars = "`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQOZmwqpdbkhao*#0MW&8%B@$";
+            //permanently use BightnessMode.Lightness since it looks best
+            BrightnessMode mode = BrightnessMode.Lightness;
 
+
+            //get image bitmap from file path
             string imagePath = "";
             if (args.Length != 0)
             {
@@ -27,6 +32,7 @@ namespace ASCIIart
                 return;
             }
 
+            //create a bitmap from the image
             Bitmap unscaledInputImage;            
             try
             {
@@ -45,6 +51,7 @@ namespace ASCIIart
             Console.Title = imagePath;
 
             //resize image if too large, keeping aspect ratio
+            //use 0.99 * console max dimensions to ensure no text wrapping
             int maxWidth = (int)Math.Floor(0.99 * Console.LargestWindowWidth);
             int maxHeight = (int)Math.Floor(0.99* Console.LargestWindowHeight);
             double scaleRate = 1;
@@ -61,15 +68,15 @@ namespace ASCIIart
                 (int)Math.Floor((double)unscaledInputImage.Width * scaleRate*2), 
                 (int)Math.Floor((double)unscaledInputImage.Height * scaleRate));
 
-            unscaledInputImage.Dispose();
+            unscaledInputImage.Dispose();            
             Console.SetWindowSize((int)Math.Ceiling(1.01* inputImage.Width), (int)Math.Ceiling(1.01 * inputImage.Height));
 
-            //get pixel data
-            string pixelChars = "`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQOZmwqpdbkhao*#0MW&8%B@$";
-            BrightnessMode mode = BrightnessMode.Lightness;
+            //image data matrices
             Color[,] imagePixels = new Color[inputImage.Width, inputImage.Height];
             int[,] imageBrightness = new int[inputImage.Width, inputImage.Height];
             string[,] outputImage = new string[inputImage.Width, inputImage.Height];
+
+            //get the brightness and color data for each pixel of the bitmap and print that character to the console
             for (int j = 0; j < inputImage.Height; j++)
             {
                 for (int i = 0; i < inputImage.Width; i++)
@@ -83,14 +90,17 @@ namespace ASCIIart
                 }
                 Console.Write("\n");
             }
+            //reset console colour to white, to avoid it being left on black and making all text invisible
             Console.ForegroundColor = ConsoleColor.White;
             while (Console.ReadLine() == null){}     
         }
 
+        //determine the brightness of the colour passed
         enum BrightnessMode {Average, Lightness, Luminosity};
         static int Brightness(Color color,BrightnessMode mode)
         {
             int brightness = 0;
+            //multiple options for calculating brightness
             switch (mode)
             {
                 case BrightnessMode.Average:
@@ -108,6 +118,7 @@ namespace ASCIIart
             return brightness;
         }
 
+        //determine which 16 console colours best matches the colour passed
         static ConsoleColor GetConsoleColor(Color color)
         {
             int[,] consoleRGB = { {0,0,0},{0,0,139},{0,100,0},{0,139,139},{139,0,0},{139,0,139},{139,139,0},
@@ -133,6 +144,7 @@ namespace ASCIIart
             int bestColor = 0;
             double colorDist = 0;
 
+            //console colour that has shortest RGB vector distance to the colour passed is the best match
             for (int i = 0; i < consoleRGB.GetLength(0);i++)
             {
                 double dR = (Math.Abs(consoleRGB[i, 0] - color.R));
