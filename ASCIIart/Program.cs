@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Drawing;
+using System.Drawing.Imaging;
 
 namespace ASCIIart
 {
@@ -11,11 +8,6 @@ namespace ASCIIart
     {
         static void Main(string[] args)
         {
-            //list of characters ordered by 'pixel density'
-            string pixelChars = "`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQOZmwqpdbkhao*#0MW&8%B@$";
-            //permanently use BightnessMode.Lightness since it looks best
-            BrightnessMode mode = BrightnessMode.Lightness;
-
 
             //get image bitmap from file path
             string imagePath = "";
@@ -31,45 +23,76 @@ namespace ASCIIart
                 while (Console.ReadLine() == null) { }
                 return;
             }
-
-            //create a bitmap from the image
-            Bitmap unscaledInputImage;            
-            try
-            {
-                unscaledInputImage = new Bitmap(imagePath);                
-            }
-            catch (Exception err)
-            {
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine(imagePath);
-                Console.WriteLine(err.Message);
-                Console.WriteLine(err.StackTrace);
-                while (Console.ReadLine() == null) { }
-                return;
-            }
-
             Console.Title = imagePath;
+            Bitmap unscaledInputImage;
+
+
+            if (System.IO.Path.GetExtension(imagePath) == ".gif")
+            {
+                Image gifImg = Image.FromFile(imagePath);
+                FrameDimension dimension = new FrameDimension(gifImg.FrameDimensionsList[0]);
+
+                int frameCount = gifImg.GetFrameCount(dimension);
+                for (int i = 0; i < frameCount; i++)
+                {
+                    Console.Clear();
+                    gifImg.SelectActiveFrame(dimension, i);
+                    unscaledInputImage = new Bitmap(gifImg);
+                    displayImage(unscaledInputImage);
+                    if (i == frameCount - 1) i = 0;
+                }
+                //while (Console.ReadLine() == null) { }
+                //return;
+            }
+            else
+            {
+                //open an image and create a bitmap       
+                try
+                {
+                    unscaledInputImage = new Bitmap(imagePath);
+                    displayImage(unscaledInputImage);
+                }
+                catch (Exception err)
+                {
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.WriteLine(imagePath);
+                    Console.WriteLine(err.Message);
+                    Console.WriteLine(err.StackTrace);
+
+                }
+            }
+            //reset console colour to white, to avoid it being left on black and making all text invisible
+            Console.ForegroundColor = ConsoleColor.White;
+            while (Console.ReadLine() == null) { }
+        }
+
+        static void displayImage(Bitmap unscaledInputImage)
+        {
+            //list of characters ordered by 'pixel density'
+            string pixelChars = "`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQOZmwqpdbkhao*#0MW&8%B@$";
+            //permanently use BightnessMode.Lightness since it looks best
+            BrightnessMode mode = BrightnessMode.Lightness;
 
             //resize image if too large, keeping aspect ratio
             //use 0.99 * console max dimensions to ensure no text wrapping
             int maxWidth = (int)Math.Floor(0.99 * Console.LargestWindowWidth);
-            int maxHeight = (int)Math.Floor(0.99* Console.LargestWindowHeight);
+            int maxHeight = (int)Math.Floor(0.99 * Console.LargestWindowHeight);
             double scaleRate = 1;
 
-            if ((double)unscaledInputImage.Width*scaleRate*2 > maxWidth)
+            if ((double)unscaledInputImage.Width * scaleRate * 2 > maxWidth)
             {
-                scaleRate *= (double) maxWidth / (double) (unscaledInputImage.Width*scaleRate*2);
+                scaleRate *= (double)maxWidth / (double)(unscaledInputImage.Width * scaleRate * 2);
             }
-            if ((double)unscaledInputImage.Height*scaleRate > maxHeight)
+            if ((double)unscaledInputImage.Height * scaleRate > maxHeight)
             {
-                scaleRate *= (double) maxHeight / (double) (unscaledInputImage.Height*scaleRate);
+                scaleRate *= (double)maxHeight / (double)(unscaledInputImage.Height * scaleRate);
             }
-            Bitmap inputImage = new Bitmap(unscaledInputImage, 
-                (int)Math.Floor((double)unscaledInputImage.Width * scaleRate*2), 
+            Bitmap inputImage = new Bitmap(unscaledInputImage,
+                (int)Math.Floor((double)unscaledInputImage.Width * scaleRate * 2),
                 (int)Math.Floor((double)unscaledInputImage.Height * scaleRate));
 
-            unscaledInputImage.Dispose();            
-            Console.SetWindowSize((int)Math.Ceiling(1.01* inputImage.Width), (int)Math.Ceiling(1.01 * inputImage.Height));
+            unscaledInputImage.Dispose();
+            Console.SetWindowSize((int)Math.Ceiling(1.01 * inputImage.Width), (int)Math.Ceiling(1.01 * inputImage.Height));
 
             //image data matrices
             Color[,] imagePixels = new Color[inputImage.Width, inputImage.Height];
@@ -86,18 +109,15 @@ namespace ASCIIart
                     int charIndex = (int)Math.Round(((double)imageBrightness[i, j] / 256) * (pixelChars.Length - 1));
                     outputImage[i, j] = pixelChars[charIndex].ToString();
                     Console.ForegroundColor = GetConsoleColor(imagePixels[i, j]);
-                    Console.Write(outputImage[i, j]);        
+                    Console.Write(outputImage[i, j]);
                 }
                 Console.Write("\n");
             }
-            //reset console colour to white, to avoid it being left on black and making all text invisible
-            Console.ForegroundColor = ConsoleColor.White;
-            while (Console.ReadLine() == null){}     
         }
 
         //determine the brightness of the colour passed
-        enum BrightnessMode {Average, Lightness, Luminosity};
-        static int Brightness(Color color,BrightnessMode mode)
+        enum BrightnessMode { Average, Lightness, Luminosity };
+        static int Brightness(Color color, BrightnessMode mode)
         {
             int brightness = 0;
             //multiple options for calculating brightness
@@ -107,14 +127,14 @@ namespace ASCIIart
                     brightness = (color.R + color.G + color.B) / 3;
                     break;
                 case BrightnessMode.Lightness:
-                    brightness = (int)(Math.Max(color.R, Math.Max(color.G,color.B)) + Math.Min(color.R, Math.Min(color.G, color.B)) )/ 2;
+                    brightness = (int)(Math.Max(color.R, Math.Max(color.G, color.B)) + Math.Min(color.R, Math.Min(color.G, color.B))) / 2;
                     break;
                 case BrightnessMode.Luminosity:
-                    brightness = (int) (0.21*color.R + 0.72*color.G + 0.07*color.B);
+                    brightness = (int)(0.21 * color.R + 0.72 * color.G + 0.07 * color.B);
                     break;
                 default:
                     break;
-            }            
+            }
             return brightness;
         }
 
@@ -145,20 +165,27 @@ namespace ASCIIart
             double colorDist = 0;
 
             //console colour that has shortest RGB vector distance to the colour passed is the best match
-            for (int i = 0; i < consoleRGB.GetLength(0);i++)
+            for (int i = 0; i < consoleRGB.GetLength(0); i++)
             {
-                double dR = (Math.Abs(consoleRGB[i, 0] - color.R));
-                double dG = (Math.Abs(consoleRGB[i, 1] - color.G));
-                double dB = (Math.Abs(consoleRGB[i, 2] - color.B));
-
-                colorDist = Math.Sqrt(dR * dR + dG * dG + dB * dB);                
-                if (colorDist < bestColorDist)
+                //temporary code to restrict colours
+                //if (i == 0 || i == 7 || i == 8 || i == 15) /*greyscale*/
+                //if(i==0||i==3||i==5||i==7||i==8|i==11||i==13||i==15) /*cyan/magenta*/
+                //if (i==4||i==7||i==8||i==12||i==15) /*red*/
                 {
-                    bestColorDist = colorDist;
-                    bestColor = i;
+                    double dR = (Math.Abs(consoleRGB[i, 0] - color.R));
+                    double dG = (Math.Abs(consoleRGB[i, 1] - color.G));
+                    double dB = (Math.Abs(consoleRGB[i, 2] - color.B));
+
+                    colorDist = Math.Sqrt(dR * dR + dG * dG + dB * dB);
+                    if (colorDist < bestColorDist)
+                    {
+                        bestColorDist = colorDist;
+                        bestColor = i;
+                    }
                 }
             }
-            return (ConsoleColor) bestColor;
+            return (ConsoleColor)bestColor;
         }
     }
 }
+
